@@ -92,6 +92,18 @@ export default function App() {
   const yellowLetters = useRef(new Set<string>());
   const darkGreyLetters = useRef(new Set<string>());
 
+  const updateColors = (guess: Guess) => {
+    for (let i = 0; i < guess.colors.length; i++) {
+      if (guess.colors[i] === Color.GREEN) {
+        greenLetters.current.add(guess.word[i]);
+      } else if (guess.colors[i] === Color.YELLOW) {
+        yellowLetters.current.add(guess.word[i]);
+      } else {
+        darkGreyLetters.current.add(guess.word[i]);
+      }
+    }
+  };
+
   const finished =
     guesses.length === 6 ||
     (guesses.length > 0 &&
@@ -121,6 +133,7 @@ export default function App() {
           if (!valid) {
           }
           setGuesses([...guesses, { word: text, colors: clue.colors }]);
+          updateColors({ word: text, colors: clue.colors });
           setText("");
           setIsLoading(false);
         });
