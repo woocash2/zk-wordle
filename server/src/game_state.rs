@@ -1,15 +1,20 @@
 use std::{sync::Arc, time::Duration};
 
+use ark_bn254::Bn254;
+use ark_circom::{read_zkey, CircomConfig};
+use ark_groth16::ProvingKey;
 use log::info;
 use parking_lot::RwLock;
 
-const SLEEP_DURATION: Duration = Duration::from_secs(10);
+const SLEEP_DURATION: Duration = Duration::from_millis(1000 * 60 * 60);
 
 #[derive(Clone, Debug)]
 pub struct GameState {
-    pub solution: String,
-    pub salt: String,
-    pub commitment: String,
+    pub solution: [char; 5],
+    pub salt: u32,
+    pub commitment: u32,
+    pub config: CircomConfig<Bn254>,
+    pub pk: ProvingKey<Bn254>,
 }
 
 pub struct GameStateService {
@@ -47,9 +52,15 @@ impl GameStateService {
 }
 
 fn dummy_state() -> GameState {
+    let mut key_file = std::fs::File::open("../proof/clue_0001.zkey").unwrap();
+    let (params, _matrices) = read_zkey(&mut key_file).unwrap();
+
     GameState {
-        solution: "hello".into(),
-        salt: "xyzab".into(),
-        commitment: "qwert".into(),
+        solution: ['H', 'E', 'L', 'L', 'O'],
+        salt: 1237,
+        commitment: 0,
+        config: CircomConfig::<Bn254>::new("../proof/clue_js/clue.wasm", "../proof/clue.r1cs")
+            .unwrap(),
+        pk: params,
     }
 }
