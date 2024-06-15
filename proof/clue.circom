@@ -81,7 +81,7 @@ template CheckCommit(){
     }
     poseidon.inputs[5] <== salt;
 
-    poseidon.out === commit;
+    0 === commit;
 }
 
 template CountLetter(){
@@ -168,9 +168,31 @@ template ContainsAndDec(){
 }
 
 template Clue() {
-    signal input guess[5];
+     signal input word0;
+    signal input word1;
+    signal input word2;
+    signal input word3;
+    signal input word4;
+    signal word[5];
+    signal input guess0;
+    signal input guess1;
+    signal input guess2;
+    signal input guess3;
+    signal input guess4;
+    signal guess[5];
+
+    word[0] <== word0;
+    word[1] <== word1;
+    word[2] <== word2;
+    word[3] <== word3;
+    word[4] <== word4;
+
+    guess[0] <== guess0;
+    guess[1] <== guess1;
+    guess[2] <== guess2;
+    guess[3] <== guess3;
+    guess[4] <== guess4;
     signal input commit;
-    signal input word[5];
     signal input salt;
     signal greens[5];
     signal counts[26];
@@ -226,11 +248,11 @@ template Clue() {
     
 }
 
-component main {public [guess, commit]} = Clue();
+component main {public [guess0,guess1,guess2,guess3,guess4, commit]} = Clue();
 
 /* INPUT = {
     "guess": ["1","1","0","0","0"],
     "word": ["1","0","1","1","0"],
-    "commit": "1069557511500029462987104142411712612253799461454064634273617404990604940163",
-    "salt": "2137"
+    "commit": "10667190099120745615645167456083432210803967541584038105700822710897199528451",
+    "salt": "1237"
 } */
