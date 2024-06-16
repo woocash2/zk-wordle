@@ -1,0 +1,9 @@
+[package]
+name = "merkle"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ff = { package="ff_ce" , version="0.11", features = ["derive"] }
+poseidon-rs = "0.0.10"
+rand = "0.8.5"
