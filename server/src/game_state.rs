@@ -6,7 +6,7 @@ use ark_groth16::ProvingKey;
 use log::info;
 use parking_lot::RwLock;
 
-const SLEEP_DURATION: Duration = Duration::from_millis(1000 * 60 * 60);
+const SLEEP_DURATION: Duration = Duration::from_secs(60 * 60);
 
 #[derive(Clone, Debug)]
 pub struct GameState {
