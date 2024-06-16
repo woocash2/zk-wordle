@@ -81,6 +81,7 @@ template CheckCommit(){
     }
     poseidon.inputs[5] <== salt;
 
+// poseidon.out === commit;
     0 === commit;
 }
 
@@ -249,10 +250,3 @@ template Clue() {
 }
 
 component main {public [guess0,guess1,guess2,guess3,guess4, commit]} = Clue();
-
-/* INPUT = {
-    "guess": ["1","1","0","0","0"],
-    "word": ["1","0","1","1","0"],
-    "commit": "10667190099120745615645167456083432210803967541584038105700822710897199528451",
-    "salt": "1237"
-} */

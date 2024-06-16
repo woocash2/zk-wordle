@@ -13,7 +13,7 @@ async fn main() {
     let game_state = state_service.get_state();
 
     let state_service_handle = state_service.run();
-    let http_service_handle = http_service::run("127.0.0.1:3000", game_state);
+    let http_service_handle = http_service::run("127.0.0.1:4000", game_state);
 
     select! {
         _ = state_service_handle => {

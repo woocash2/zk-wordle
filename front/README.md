@@ -1,17 +1,17 @@
 Install dependencies:
 
 ```bash
-npm install
+yarn
 ```
 
 Run the development server:
 
 ```bash
-npm start
+yarn start
 ```
 
 Run the development server with tunneling:
 
 ```bash
-npm start:tunnel
+yarn start:tunnel
 ```

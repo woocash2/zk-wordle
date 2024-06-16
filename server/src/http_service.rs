@@ -31,6 +31,7 @@ fn generate_proof(
     pk: ProvingKey<Bn254>,
 ) -> (Proof<Bn254>, [u8; 5]) {
     let mut builder = CircomBuilder::new(config);
+    // workaround for the fact that this builder doesn't support array inputs
     builder.push_input("word0", (word[0] as u8) - 65);
     builder.push_input("word1", (word[1] as u8) - 65);
     builder.push_input("word2", (word[2] as u8) - 65);
@@ -46,6 +47,7 @@ fn generate_proof(
 
     let circom = builder.build().unwrap();
 
+    // the first five public inputs are actually public outputs
     let mut inputs = circom.get_public_inputs().unwrap();
     let _ = inputs.split_off(5);
 
@@ -56,6 +58,7 @@ fn generate_proof(
 
     for i in 0..inputs.len() {
         if i < 5 {
+            // since the values are either 0, 1 or 2, we can just take the first little endian byte
             clue[i] = PrimeField::into_bigint(inputs[i]).to_bytes_le()[0];
         }
     }
@@ -70,13 +73,6 @@ fn generate_proof(
     println!("{:?}", proof.c);
 
     (proof, clue)
-
-    // let pvk = Groth16::<Bn254>::process_vk(&pk.vk).unwrap();
-
-    // let verified = Groth16::<Bn254>::verify_with_processed_vk(&pvk, &inputs, &proof).unwrap();
-
-    // assert!(verified);
-    // println!("hej");
 }
 
 #[derive(Serialize, Deserialize)]
