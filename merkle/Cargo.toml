@@ -5,5 +5,6 @@ edition = "2021"
 
 [dependencies]
 ff = { package="ff_ce" , version="0.11", features = ["derive"] }
+num = { version = "0.4.0", features = ["num-bigint"] }
 poseidon-rs = "0.0.10"
 rand = "0.8.5"
