@@ -1,0 +1,14 @@
+diff --git a/node_modules/@expo/browser-polyfill/src/module.js b/node_modules/@expo/browser-polyfill/src/module.js
+index e9cc062..76c6157 100644
+--- a/node_modules/@expo/browser-polyfill/src/module.js
++++ b/node_modules/@expo/browser-polyfill/src/module.js
+@@ -1 +1,7 @@
+-// do nothing :)
++import Document from './DOM/Document';
++
++import './window';
++import './resize';
++import './process';
++import './console';
++window.document = window.document || new Document();
+\ No newline at end of file

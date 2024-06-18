@@ -5,9 +5,14 @@ export enum Color {
   YELLOW = "#DDDD00",
 }
 
-export type Proof = number;
+export type Proof = {
+  a: string[];
+  b: string[];
+  c: string[];
+};
 
 export type Clue = {
+  clue: number[];
   colors: Color[];
   proof: Proof;
 };

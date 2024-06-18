@@ -4,9 +4,18 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ark-bn254 = "0.4.0"
+ark-circom = "0.1.0"
+ark-ff = "0.4.1"
+ark-groth16 = "0.4.0"
+ark-snark = "0.4.0"
 axum = "0.7.5"
 env_logger = "0.11.3"
 log = "0.4.21"
+num-bigint = "0.4.3"
 parking_lot = "0.12.3"
+rand = "0.8.5"
 serde = { version = "1.0.203", features = ["derive"] }
 tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
+tower-http ={ version = "0.5.2", features = ["cors"] } 
+

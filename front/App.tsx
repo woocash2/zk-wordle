@@ -14,7 +14,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { TopBar } from "./src/TopBar";
 import { Color, type Guess } from "./src/types";
-import { getClue, verifyClue } from "./src/verify";
+import { getClue, getCommitment, verifyClue } from "./src/api";
 import { Keyboard } from "./src/Keyboard";
 import { ResultView } from "./src/ResultView";
 
@@ -35,14 +35,25 @@ function Row({ word, colors }: { word: string; colors: Color[] }) {
   );
 }
 
-function InputRow({ text, isLoading }: { text: string; isLoading: boolean }) {
+function InputRow({
+  text,
+  isLoading,
+  isInvalid,
+}: {
+  text: string;
+  isLoading: boolean;
+  isInvalid: boolean;
+}) {
   const sv = useSharedValue(1);
 
   useEffect(() => {
     sv.value = isLoading
       ? withRepeat(withTiming(0.5, { duration: 600 }), -1, true)
       : 1;
-  }, [isLoading]);
+    if (isInvalid) {
+      sv.value = 1;
+    }
+  }, [isLoading, isInvalid]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -66,7 +77,7 @@ function InputRow({ text, isLoading }: { text: string; isLoading: boolean }) {
           entering={FadeIn}
           exiting={FadeOut.delay(100 * i)}
           key={i}
-          style={styles.cell}
+          style={[styles.cell, isInvalid && { backgroundColor: "red" }]}
         >
           <LayoutAnimationConfig skipExiting>
             <Animated.Text
@@ -91,6 +102,12 @@ export default function App() {
   const greenLetters = useRef(new Set<string>());
   const yellowLetters = useRef(new Set<string>());
   const darkGreyLetters = useRef(new Set<string>());
+  const [commitment, setCommitment] = useState<string | null>(null);
+  const [isInvalid, setIsInvalid] = useState<boolean>(false);
+
+  useEffect(() => {
+    getCommitment().then(setCommitment);
+  }, []);
 
   const updateColors = (guess: Guess) => {
     for (let i = 0; i < guess.colors.length; i++) {
@@ -126,11 +143,13 @@ export default function App() {
   };
 
   const onSubmit = () => {
-    if (text.length === 5) {
+    if (text.length === 5 && commitment !== null) {
       setIsLoading(true);
       getClue(text).then((clue) => {
-        verifyClue(clue).then((valid) => {
+        verifyClue(text, clue, commitment).then((valid) => {
           if (!valid) {
+            setIsInvalid(true);
+            return;
           }
           setGuesses([...guesses, { word: text, colors: clue.colors }]);
           updateColors({ word: text, colors: clue.colors });
@@ -149,6 +168,10 @@ export default function App() {
   return (
     <View style={styles.container}>
       <TopBar onReset={onReset} />
+      <Text style={styles.hash}>Current hash: {commitment}</Text>
+      {isInvalid && (
+        <Text style={styles.redText}>{"The server is lying to you :(("}</Text>
+      )}
       {finished && (
         <ResultView
           won={guesses[guesses.length - 1].colors.every(
@@ -161,7 +184,12 @@ export default function App() {
           <Row key={i} word={guess.word} colors={guess.colors} />
         ))}
         {!finished && (
-          <InputRow key={guesses.length} text={text} isLoading={isLoading} />
+          <InputRow
+            key={guesses.length}
+            text={text}
+            isLoading={isLoading}
+            isInvalid={isInvalid}
+          />
         )}
       </View>
       <Keyboard
@@ -208,6 +236,14 @@ const styles = StyleSheet.create({
   },
   text: {
     color: "white",
+    fontSize: 50,
+  },
+  hash: {
+    color: "white",
+    fontSize: 10,
+  },
+  redText: {
+    color: "red",
     fontSize: 50,
   },
 });
