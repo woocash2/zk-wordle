@@ -18,6 +18,7 @@ const SOLUTION_WORDS_PATH: &str = "../words/possible_solutions.txt";
 const OTHER_WORDS_PATH: &str = "../words/possible_solutions.txt";
 
 pub struct WordBank {
+    #[allow(dead_code)]
     tree: MerkleTree,
     words: Vec<String>,
 }
@@ -41,6 +42,7 @@ impl WordBank {
         })
     }
 
+    #[allow(dead_code)]
     pub fn get_merkle_root(&self) -> BigUint {
         self.tree.root_hash()
     }

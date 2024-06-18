@@ -9,6 +9,7 @@ pub enum Error {
     MerkleHashFail,
     OutOfBounds,
     WordHashFail,
+    SaltedWordHashFail,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -125,13 +126,18 @@ impl MerkleTree {
     }
 }
 
-pub fn hash_of_two(a: &str, b: &str) -> Result<BigUint, Error> {
+pub fn hash_word_with_salt(word: &str, salt: &BigUint) -> Result<BigUint, Error> {
+    let mut input = Vec::with_capacity(6);
+    for c in word.bytes() {
+        let letter_id = c - 97;
+        input.push(
+            Fr::from_str(&letter_id.to_string()).expect("string should be a correct decimal"),
+        );
+    }
+    input.push(Fr::from_str(&salt.to_string()).expect("string should be a correct decimal"));
+
     let p = Poseidon::new();
-    let hash = merkle_hash(
-        Fr::from_str(a).ok_or(Error::FrCreateFail)?,
-        Fr::from_str(b).ok_or(Error::FrCreateFail)?,
-        &p,
-    )?;
+    let hash = p.hash(input).map_err(|_| Error::SaltedWordHashFail)?;
     Ok(fr_to_biguint(hash))
 }
 
@@ -246,7 +252,7 @@ mod test {
 
         let actual = fr_to_biguint(hash);
         let expected = BigUint::from_str(
-            "14744269619966411208579211824598458697587494354926760081771325075741142829156",
+            "14744269619966411208579211824598458697587494354926760081771325075741142829156", // matches circom's poseidon output
         )
         .unwrap();
 

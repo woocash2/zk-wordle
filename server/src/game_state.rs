@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Duration};
 use ark_bn254::Bn254;
 use ark_circom::{read_zkey, CircomConfig};
 use ark_groth16::ProvingKey;
-use merkle::hash_of_two;
+use merkle::hash_word_with_salt;
 use num_bigint::{BigUint, RandomBits};
 use parking_lot::RwLock;
 use rand::{thread_rng, Rng};
@@ -90,9 +90,8 @@ impl GameStateService {
 fn create_game_state(word_bank: &WordBank, word_id: usize) -> GameState {
     let solution = word_bank.random_word();
     let salt: BigUint = thread_rng().sample(RandomBits::new(256));
-    let merkle_root = word_bank.get_merkle_root();
-    let commitment = hash_of_two(&merkle_root.to_string(), &salt.to_string())
-        .expect("passed string numbers should fit 256 bits");
+    let commitment =
+        hash_word_with_salt(&solution, &salt).expect("passed string numbers should fit 256 bits");
 
     GameState {
         word_id,

@@ -18,28 +18,37 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 
+use crate::game_state::GameState;
 use crate::game_state::SharedState;
 
 fn generate_proof(
     guess: &[u8],
-    word: &[char],
+    game_state: GameState,
     config: CircomConfig<Bn254>,
     pk: ProvingKey<Bn254>,
 ) -> (Proof<Bn254>, [u8; 5]) {
+    let GameState {
+        solution,
+        salt,
+        commitment,
+        ..
+    } = game_state;
+    let solution = solution.as_bytes();
+
     let mut builder = CircomBuilder::new(config);
     // workaround for the fact that this builder doesn't support array inputs
-    builder.push_input("word0", (word[0] as u8) - 97);
-    builder.push_input("word1", (word[1] as u8) - 97);
-    builder.push_input("word2", (word[2] as u8) - 97);
-    builder.push_input("word3", (word[3] as u8) - 97);
-    builder.push_input("word4", (word[4] as u8) - 97);
-    builder.push_input("salt", 1237);
+    builder.push_input("word0", (solution[0]) - 97);
+    builder.push_input("word1", (solution[1]) - 97);
+    builder.push_input("word2", (solution[2]) - 97);
+    builder.push_input("word3", (solution[3]) - 97);
+    builder.push_input("word4", (solution[4]) - 97);
+    builder.push_input("salt", salt);
     builder.push_input("guess0", guess[0] - 97);
     builder.push_input("guess1", guess[1] - 97);
     builder.push_input("guess2", guess[2] - 97);
     builder.push_input("guess3", guess[3] - 97);
     builder.push_input("guess4", guess[4] - 97);
-    builder.push_input("commit", 0);
+    builder.push_input("commit", commitment);
 
     let circom = builder.build().unwrap();
 
@@ -138,10 +147,9 @@ async fn handle_guess(
     let state = state.read().clone();
     let mut array = [0, 0, 0, 0, 0];
     array[..guess.len()].copy_from_slice(guess.as_bytes());
-    let solution: Vec<_> = state.game_state.solution.chars().collect();
     let (proof, clue) = generate_proof(
         &array,
-        solution.as_slice(),
+        state.game_state,
         state.config.clone(),
         state.pk.clone(),
     );
