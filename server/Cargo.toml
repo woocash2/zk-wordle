@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 ark-bn254 = "0.4.0"
-ark-circom = "0.1.0"
+ark-circom = { git = "https://github.com/Yiheng-Liu/circom-compat.git", branch = "feat/multi-dimension-input"} # we need this to support array inputs to circom
 ark-ff = "0.4.1"
 ark-groth16 = "0.4.0"
 ark-snark = "0.4.0"

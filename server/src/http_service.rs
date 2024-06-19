@@ -1,17 +1,14 @@
 use ark_bn254::Bn254;
-use ark_circom::CircomBuilder;
-use ark_circom::CircomConfig;
-use ark_circom::CircomReduction;
-use ark_ff::BigInteger;
-use ark_ff::PrimeField;
-use ark_groth16::Groth16;
-use ark_groth16::Proof;
-use ark_groth16::ProvingKey;
+use ark_circom::{circom::Inputs, CircomBuilder, CircomConfig, CircomReduction};
+use ark_ff::{BigInteger, PrimeField};
+use ark_groth16::{Groth16, Proof, ProvingKey};
 use ark_snark::SNARK;
-use axum::extract::Path;
-use axum::http::Method;
-use axum::{extract::State, response::IntoResponse, routing::get, serve, Json, Router};
+use axum::{
+    extract::Path, extract::State, http::Method, response::IntoResponse, routing::get, serve, Json,
+    Router,
+};
 use log::error;
+use num_bigint::BigInt;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -22,7 +19,7 @@ use crate::game_state::GameState;
 use crate::game_state::SharedState;
 
 fn generate_proof(
-    guess: &[u8],
+    guess: String,
     game_state: GameState,
     config: CircomConfig<Bn254>,
     pk: ProvingKey<Bn254>,
@@ -33,22 +30,15 @@ fn generate_proof(
         commitment,
         ..
     } = game_state;
-    let solution = solution.as_bytes();
+    let guess = string_to_bigints(guess);
+    let solution = string_to_bigints(solution);
 
     let mut builder = CircomBuilder::new(config);
     // workaround for the fact that this builder doesn't support array inputs
-    builder.push_input("word0", (solution[0]) - 97);
-    builder.push_input("word1", (solution[1]) - 97);
-    builder.push_input("word2", (solution[2]) - 97);
-    builder.push_input("word3", (solution[3]) - 97);
-    builder.push_input("word4", (solution[4]) - 97);
-    builder.push_input("salt", salt);
-    builder.push_input("guess0", guess[0] - 97);
-    builder.push_input("guess1", guess[1] - 97);
-    builder.push_input("guess2", guess[2] - 97);
-    builder.push_input("guess3", guess[3] - 97);
-    builder.push_input("guess4", guess[4] - 97);
-    builder.push_input("commit", commitment);
+    builder.push_input("word", Inputs::BigIntVec(solution));
+    builder.push_input("guess", Inputs::BigIntVec(guess));
+    builder.push_input("salt", Inputs::BigInt(salt.into()));
+    builder.push_input("commit", Inputs::BigInt(commitment.into()));
 
     let circom = builder.build().unwrap();
 
@@ -78,6 +68,10 @@ fn generate_proof(
     println!("{:?}", proof.c);
 
     (proof, clue)
+}
+
+fn string_to_bigints(s: String) -> Vec<BigInt> {
+    s.as_bytes().into_iter().map(|x| (x - 97).into()).collect()
 }
 
 #[derive(Serialize, Deserialize)]
@@ -145,10 +139,9 @@ async fn handle_guess(
     Path(guess): Path<String>,
 ) -> impl IntoResponse {
     let state = state.read().clone();
-    let mut array = [0, 0, 0, 0, 0];
-    array[..guess.len()].copy_from_slice(guess.as_bytes());
+    
     let (proof, clue) = generate_proof(
-        &array,
+        guess,
         state.game_state,
         state.config.clone(),
         state.pk.clone(),

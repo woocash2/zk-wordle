@@ -112,8 +112,7 @@ dependencies = [
 [[package]]
 name = "ark-circom"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "295bb8e275f3e211b36a822469ba88deb028ecb3d7fe8684102598a9158a7350"
+source = "git+https://github.com/Yiheng-Liu/circom-compat.git?branch=feat/multi-dimension-input#4f987dc9985321c3dbd3fc13331db9cc63f7f9c8"
 dependencies = [
  "ark-bn254",
  "ark-crypto-primitives",
