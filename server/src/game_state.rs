@@ -38,7 +38,7 @@ impl GameStateService {
         let word_bank = WordBank::new().expect("word bank creation should succeed");
 
         println!("Setting circom config and proving key...");
-        let mut key_file = std::fs::File::open("../proof/clue_0001.zkey").unwrap();
+        let mut key_file = std::fs::File::open("../proof/circuit_final.zkey").unwrap();
         let (pk, _matrices) = read_zkey(&mut key_file).unwrap();
         let config = CircomConfig::<Bn254>::new("../proof/clue_js/clue.wasm", "../proof/clue.r1cs")
             .expect("circom config creation should succeed");
