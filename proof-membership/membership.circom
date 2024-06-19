@@ -1,5 +1,5 @@
 pragma circom 2.1.9;
-include "circomlib/poseidon.circom";
+include "../circomlib/poseidon.circom";
 
 template CheckCommitment(){
     signal input word[5];
