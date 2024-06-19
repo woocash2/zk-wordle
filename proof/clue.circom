@@ -81,8 +81,7 @@ template CheckCommit(){
     }
     poseidon.inputs[5] <== salt;
 
-// poseidon.out === commit;
-    0 === commit;
+    poseidon.out === commit;
 }
 
 template CountLetter(){
