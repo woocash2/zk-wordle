@@ -3,7 +3,7 @@ use std::{
     io::{self, BufRead, BufReader},
 };
 
-use merkle::MerkleTree;
+use merkle::{MerklePathEntry, MerkleTree};
 use num_bigint::BigUint;
 use rand::{thread_rng, Rng};
 
@@ -12,6 +12,15 @@ pub enum Error {
     BadWord,
     IoFail(io::Error),
     MerkleCreateFail(merkle::Error),
+}
+
+pub struct PickWordResult {
+    // randomly selected word from the word bank
+    pub word: String,
+    // merkle siblings which contain a path to the merkle root
+    pub path: Vec<MerklePathEntry>,
+    // merkle root hash
+    pub root_hash: BigUint,
 }
 
 const SOLUTION_WORDS_PATH: &str = "../words/possible_solutions.txt";
@@ -42,14 +51,16 @@ impl WordBank {
         })
     }
 
-    #[allow(dead_code)]
-    pub fn get_merkle_root(&self) -> BigUint {
-        self.tree.root_hash()
-    }
-
-    pub fn random_word(&self) -> String {
+    pub fn pick_word(&self) -> PickWordResult {
         let idx = thread_rng().gen_range(0..self.words.len());
-        self.words[idx].clone()
+        PickWordResult {
+            word: self.words[idx].clone(),
+            path: self
+                .tree
+                .get_path(idx)
+                .expect("idx should exist in merkle tree"),
+            root_hash: self.tree.root_hash(),
+        }
     }
 }
 

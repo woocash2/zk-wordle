@@ -15,21 +15,18 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 
-use crate::game_state::GameState;
+use crate::game_state::CmState;
 use crate::game_state::SharedState;
 
 fn generate_proof(
     guess: String,
-    game_state: GameState,
+    solution: String,
+    cm_state: CmState,
     config: CircomConfig<Bn254>,
     pk: ProvingKey<Bn254>,
 ) -> (Proof<Bn254>, [u8; 5]) {
-    let GameState {
-        solution,
-        salt,
-        commitment,
-        ..
-    } = game_state;
+    let CmState { commitment, salt } = cm_state;
+
     let guess = string_to_bigints(guess);
     let solution = string_to_bigints(solution);
 
@@ -71,7 +68,7 @@ fn generate_proof(
 }
 
 fn string_to_bigints(s: String) -> Vec<BigInt> {
-    s.as_bytes().into_iter().map(|x| (x - 97).into()).collect()
+    s.as_bytes().iter().map(|x| (x - 97).into()).collect()
 }
 
 #[derive(Serialize, Deserialize)]
@@ -116,7 +113,7 @@ async fn handle_start(State(state): State<Arc<RwLock<SharedState>>>) -> impl Int
 
     Json(StartResponse {
         word_id: state.game_state.word_id,
-        commitment: state.game_state.commitment.to_string(),
+        commitment: state.cm_state.commitment.to_string(),
     })
     .into_response()
 }
@@ -139,10 +136,11 @@ async fn handle_guess(
     Path(guess): Path<String>,
 ) -> impl IntoResponse {
     let state = state.read().clone();
-    
+
     let (proof, clue) = generate_proof(
         guess,
-        state.game_state,
+        state.game_state.solution,
+        state.cm_state,
         state.config.clone(),
         state.pk.clone(),
     );
