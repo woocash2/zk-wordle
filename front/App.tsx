@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { LayoutAnimation, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, {
   FadeIn,
   FadeInUp,
@@ -22,6 +22,7 @@ import {
 } from "./src/api";
 import { Keyboard } from "./src/Keyboard";
 import { ResultView } from "./src/ResultView";
+import { validGuesses } from "./src/words";
 
 function Row({ word, colors }: { word: string; colors: Color[] }) {
   return (
@@ -44,12 +45,15 @@ function InputRow({
   text,
   isLoading,
   isInvalid,
+  isInvalidGuess,
 }: {
   text: string;
   isLoading: boolean;
   isInvalid: boolean;
+  isInvalidGuess: boolean;
 }) {
   const sv = useSharedValue(1);
+  const sv2 = useSharedValue<string>(Color.GREY);
 
   useEffect(() => {
     sv.value = isLoading
@@ -58,11 +62,20 @@ function InputRow({
     if (isInvalid) {
       sv.value = 1;
     }
-  }, [isLoading, isInvalid]);
+    sv2.value = withTiming(isInvalidGuess ? "#FF2222" : Color.GREY, {
+      duration: isInvalidGuess ? 1000 : 500,
+    });
+  }, [isLoading, isInvalid, isInvalidGuess]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
       opacity: sv.value,
+    };
+  });
+
+  const cellStyle = useAnimatedStyle(() => {
+    return {
+      backgroundColor: sv2.value,
     };
   });
 
@@ -82,7 +95,11 @@ function InputRow({
           entering={FadeIn}
           exiting={FadeOut.delay(100 * i)}
           key={i}
-          style={[styles.cell, isInvalid && { backgroundColor: "red" }]}
+          style={[
+            styles.cell,
+            cellStyle,
+            isInvalid && { backgroundColor: "red" },
+          ]}
         >
           <LayoutAnimationConfig skipExiting>
             <Animated.Text
@@ -111,6 +128,7 @@ export default function App() {
   const [isInvalid, setIsInvalid] = useState<boolean>(false);
   const [isMembershipVerified, setIsMembershipVerified] =
     useState<boolean>(false);
+  const [isInvalidGuess, setIsInvalidGuess] = useState<boolean>(false);
 
   useEffect(() => {
     getCommitment().then(setCommitment);
@@ -154,6 +172,7 @@ export default function App() {
 
   const onReset = () => {
     if (isLoading) return;
+    setIsInvalidGuess(false);
     setGuesses([]);
     setText("");
     greenLetters.current.clear();
@@ -163,6 +182,10 @@ export default function App() {
 
   const onSubmit = () => {
     if (text.length === 5 && commitment !== null) {
+      if (!validGuesses.has(text.toLowerCase())) {
+        setIsInvalidGuess(true);
+        return;
+      }
       setIsLoading(true);
       getClue(text).then((clue) => {
         verifyClue(text, clue, commitment.commitment).then((valid) => {
@@ -182,6 +205,7 @@ export default function App() {
   const onBack = () => {
     if (isLoading) return;
     setText((prev) => prev.slice(0, prev.length - 1));
+    setIsInvalidGuess(false);
   };
 
   return (
@@ -211,6 +235,7 @@ export default function App() {
             text={text}
             isLoading={isLoading}
             isInvalid={isInvalid}
+            isInvalidGuess={isInvalidGuess}
           />
         )}
       </View>
