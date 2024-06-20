@@ -13,8 +13,13 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { TopBar } from "./src/TopBar";
-import { Color, type Guess } from "./src/types";
-import { getClue, getCommitment, verifyClue } from "./src/api";
+import { Color, type Commitment, type Guess } from "./src/types";
+import {
+  getClue,
+  getCommitment,
+  verifyClue,
+  verifyCommitment,
+} from "./src/api";
 import { Keyboard } from "./src/Keyboard";
 import { ResultView } from "./src/ResultView";
 
@@ -102,12 +107,26 @@ export default function App() {
   const greenLetters = useRef(new Set<string>());
   const yellowLetters = useRef(new Set<string>());
   const darkGreyLetters = useRef(new Set<string>());
-  const [commitment, setCommitment] = useState<string | null>(null);
+  const [commitment, setCommitment] = useState<Commitment | null>(null);
   const [isInvalid, setIsInvalid] = useState<boolean>(false);
+  const [isMembershipVerified, setIsMembershipVerified] =
+    useState<boolean>(false);
 
   useEffect(() => {
     getCommitment().then(setCommitment);
   }, []);
+
+  useEffect(() => {
+    if (commitment) {
+      verifyCommitment(commitment).then((valid) => {
+        if (!valid) {
+          setIsInvalid(true);
+        } else {
+          setIsMembershipVerified(true);
+        }
+      });
+    }
+  }, [commitment]);
 
   const updateColors = (guess: Guess) => {
     for (let i = 0; i < guess.colors.length; i++) {
@@ -146,7 +165,7 @@ export default function App() {
     if (text.length === 5 && commitment !== null) {
       setIsLoading(true);
       getClue(text).then((clue) => {
-        verifyClue(text, clue, commitment).then((valid) => {
+        verifyClue(text, clue, commitment.commitment).then((valid) => {
           if (!valid) {
             setIsInvalid(true);
             return;
@@ -168,7 +187,10 @@ export default function App() {
   return (
     <View style={styles.container}>
       <TopBar onReset={onReset} />
-      <Text style={styles.hash}>Current hash: {commitment}</Text>
+      <Text style={styles.hash}>
+        Current hash: {commitment?.commitment}
+        {isMembershipVerified ? " ✅" : " ⏱️"}
+      </Text>
       {isInvalid && (
         <Text style={styles.redText}>{"The server is lying to you :(("}</Text>
       )}
