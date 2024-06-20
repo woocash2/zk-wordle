@@ -19,7 +19,8 @@ pub struct SharedState {
     pub merkle_state: MerkleState,
     pub membership_config: CircomConfig<Bn254>,
     pub clue_config: CircomConfig<Bn254>,
-    pub pk: ProvingKey<Bn254>,
+    pub clue_pk: ProvingKey<Bn254>,
+    pub membership_pk: ProvingKey<Bn254>,
 }
 
 #[derive(Clone, Debug)]
@@ -50,9 +51,11 @@ impl GameStateService {
         println!("Creating word bank...");
         let word_bank = WordBank::new().expect("word bank creation should succeed");
 
-        println!("Setting circom configs and proving key...");
-        let mut key_file = std::fs::File::open("../keys/circuit_final.zkey").unwrap();
-        let (pk, _matrices) = read_zkey(&mut key_file).unwrap();
+        println!("Setting circom configs and proving keys...");
+        let mut key_file = std::fs::File::open("../keys/clue_final.zkey").unwrap();
+        let (clue_pk, _matrices) = read_zkey(&mut key_file).unwrap();
+        let mut key_file = std::fs::File::open("../keys/membership_final.zkey").unwrap();
+        let (membership_pk, _matrices) = read_zkey(&mut key_file).unwrap();
         let membership_config = CircomConfig::<Bn254>::new(
             "../proof-membership/membership_js/membership.wasm",
             "../proof-membership/membership.r1cs",
@@ -71,7 +74,8 @@ impl GameStateService {
             merkle_state,
             membership_config,
             clue_config,
-            pk,
+            clue_pk,
+            membership_pk,
         };
 
         GameStateService {

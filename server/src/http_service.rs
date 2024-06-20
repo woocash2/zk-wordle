@@ -33,7 +33,6 @@ fn generate_clue_proof(
     let solution = string_to_bigints(solution);
 
     let mut builder = CircomBuilder::new(config);
-    // workaround for the fact that this builder doesn't support array inputs
     builder.push_input("word", Inputs::BigIntVec(solution));
     builder.push_input("guess", Inputs::BigIntVec(guess));
     builder.push_input("salt", Inputs::BigInt(salt.into()));
@@ -61,10 +60,6 @@ fn generate_clue_proof(
 
     // Generate the proof
     let proof = Groth16::<Bn254, CircomReduction>::prove(&pk, circom, &mut rng).unwrap();
-
-    println!("{:?}", proof.a);
-    println!("{:?}", proof.b);
-    println!("{:?}", proof.c);
 
     (proof, clue)
 }
@@ -101,10 +96,6 @@ fn generate_membership_proof(
     // Generate the proof
     let mut rng = rand::thread_rng();
     let proof = Groth16::<Bn254, CircomReduction>::prove(&pk, circom, &mut rng).unwrap();
-
-    println!("{:?}", proof.a);
-    println!("{:?}", proof.b);
-    println!("{:?}", proof.c);
 
     proof
 }
@@ -160,7 +151,7 @@ async fn handle_start(State(state): State<Arc<RwLock<SharedState>>>) -> impl Int
         state.cm_state,
         state.merkle_state,
         state.membership_config,
-        state.pk,
+        state.membership_pk,
     );
 
     Json(StartResponse {
@@ -199,7 +190,7 @@ async fn handle_guess(
         state.game_state.solution,
         state.cm_state,
         state.clue_config.clone(),
-        state.pk.clone(),
+        state.clue_pk,
     );
 
     Json(GuessResponse {
