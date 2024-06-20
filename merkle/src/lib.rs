@@ -12,30 +12,29 @@ pub enum Error {
     SaltedWordHashFail,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NodeType {
     Left,
     Right,
 }
 
-// hexadecimal number as string
-pub type RawFr = String;
-
-struct MerklePathEntry {
+#[derive(Clone, Debug)]
+struct FrMerklePathEntry {
     pub left: Fr,
     pub right: Fr,
     pub on_path: NodeType, // which one is on the path to the root, left or right
 }
 
-pub struct RawMerklePathEntry {
+#[derive(Clone, Debug)]
+pub struct MerklePathEntry {
     pub left: BigUint,
     pub right: BigUint,
     pub on_path: NodeType,
 }
 
-impl From<MerklePathEntry> for RawMerklePathEntry {
-    fn from(x: MerklePathEntry) -> Self {
-        RawMerklePathEntry {
+impl From<FrMerklePathEntry> for MerklePathEntry {
+    fn from(x: FrMerklePathEntry) -> Self {
+        MerklePathEntry {
             left: fr_to_biguint(x.left),
             right: fr_to_biguint(x.right),
             on_path: x.on_path,
@@ -80,7 +79,7 @@ impl MerkleTree {
         Ok(MerkleTree { m, hashes })
     }
 
-    pub fn get_path(&self, idx: usize) -> Result<Vec<RawMerklePathEntry>, Error> {
+    pub fn get_path(&self, idx: usize) -> Result<Vec<MerklePathEntry>, Error> {
         Ok(self
             .get_path_inner(idx)?
             .into_iter()
@@ -88,7 +87,7 @@ impl MerkleTree {
             .collect())
     }
 
-    fn get_path_inner(&self, idx: usize) -> Result<Vec<MerklePathEntry>, Error> {
+    fn get_path_inner(&self, idx: usize) -> Result<Vec<FrMerklePathEntry>, Error> {
         if idx >= self.m {
             return Err(Error::OutOfBounds);
         }
@@ -99,14 +98,14 @@ impl MerkleTree {
         while tree_idx > 1 {
             if tree_idx % 2 == 0 {
                 // the selected node is of type left
-                path.push(MerklePathEntry {
+                path.push(FrMerklePathEntry {
                     left: self.hashes[tree_idx],
                     right: self.hashes[tree_idx + 1],
                     on_path: NodeType::Left,
                 })
             } else {
                 // the selected node is of type right
-                path.push(MerklePathEntry {
+                path.push(FrMerklePathEntry {
                     left: self.hashes[tree_idx - 1],
                     right: self.hashes[tree_idx],
                     on_path: NodeType::Right,
