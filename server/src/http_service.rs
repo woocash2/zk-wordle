@@ -8,6 +8,7 @@ use axum::{
     Router,
 };
 use log::error;
+use merkle::NodeType;
 use num_bigint::BigInt;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
@@ -16,9 +17,10 @@ use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::game_state::CmState;
+use crate::game_state::MerkleState;
 use crate::game_state::SharedState;
 
-fn generate_proof(
+fn generate_clue_proof(
     guess: String,
     solution: String,
     cm_state: CmState,
@@ -67,6 +69,46 @@ fn generate_proof(
     (proof, clue)
 }
 
+fn generate_membership_proof(
+    solution: String,
+    cm_state: CmState,
+    merkle_state: MerkleState,
+    config: CircomConfig<Bn254>,
+    pk: ProvingKey<Bn254>,
+) -> Proof<Bn254> {
+    let solution = string_to_bigints(solution);
+    let mut builder = CircomBuilder::new(config);
+
+    let mut hashes = Vec::with_capacity(merkle_state.path.len());
+    let mut indicators = Vec::with_capacity(merkle_state.path.len());
+
+    for entry in merkle_state.path {
+        hashes.push(vec![entry.left.into(), entry.right.into()]);
+        indicators.push(match entry.on_path {
+            NodeType::Left => 0.into(),
+            NodeType::Right => 1.into(),
+        });
+    }
+
+    builder.push_input("word", Inputs::BigIntVec(solution));
+    builder.push_input("salt", Inputs::BigInt(cm_state.salt.into()));
+    builder.push_input("cm", Inputs::BigInt(cm_state.commitment.into()));
+    builder.push_input("hashes", Inputs::BigIntVecVec(hashes));
+    builder.push_input("pathIndicators", Inputs::BigIntVec(indicators));
+
+    let circom = builder.build().unwrap();
+
+    // Generate the proof
+    let mut rng = rand::thread_rng();
+    let proof = Groth16::<Bn254, CircomReduction>::prove(&pk, circom, &mut rng).unwrap();
+
+    println!("{:?}", proof.a);
+    println!("{:?}", proof.b);
+    println!("{:?}", proof.c);
+
+    proof
+}
+
 fn string_to_bigints(s: String) -> Vec<BigInt> {
     s.as_bytes().iter().map(|x| (x - 97).into()).collect()
 }
@@ -106,20 +148,35 @@ pub async fn run(addr: &str, state: Arc<RwLock<SharedState>>) {
 struct StartResponse {
     word_id: usize,
     commitment: String,
+    proof: ProofSerializable,
 }
 
 async fn handle_start(State(state): State<Arc<RwLock<SharedState>>>) -> impl IntoResponse {
     let state = state.read().clone();
+    let commitment = state.cm_state.commitment.clone();
+
+    let proof = generate_membership_proof(
+        state.game_state.solution,
+        state.cm_state,
+        state.merkle_state,
+        state.membership_config,
+        state.pk,
+    );
 
     Json(StartResponse {
         word_id: state.game_state.word_id,
-        commitment: state.cm_state.commitment.to_string(),
+        commitment: commitment.to_string(),
+        proof: ProofSerializable {
+            a: proof.a.to_string(),
+            b: proof.b.to_string(),
+            c: proof.c.to_string(),
+        },
     })
     .into_response()
 }
 
 #[derive(Serialize)]
-struct BBProof {
+struct ProofSerializable {
     a: String,
     b: String,
     c: String,
@@ -128,7 +185,7 @@ struct BBProof {
 #[derive(Serialize)]
 struct GuessResponse {
     colors: [u8; 5],
-    proof: BBProof,
+    proof: ProofSerializable,
 }
 
 async fn handle_guess(
@@ -137,17 +194,17 @@ async fn handle_guess(
 ) -> impl IntoResponse {
     let state = state.read().clone();
 
-    let (proof, clue) = generate_proof(
+    let (proof, clue) = generate_clue_proof(
         guess,
         state.game_state.solution,
         state.cm_state,
-        state.config.clone(),
+        state.clue_config.clone(),
         state.pk.clone(),
     );
 
     Json(GuessResponse {
         colors: clue,
-        proof: BBProof {
+        proof: ProofSerializable {
             a: proof.a.to_string(),
             b: proof.b.to_string(),
             c: proof.c.to_string(),
