@@ -12,38 +12,32 @@ use crate::word_bank::{PickWordResult, WordBank};
 
 const SLEEP_DURATION: Duration = Duration::from_secs(60 * 60);
 
-#[derive(Clone, Debug)]
 pub struct SharedState {
-    pub game_state: GameState,
-    pub cm_state: CmState,
-    pub merkle_state: MerkleState,
+    // this state changes per each round
+    pub mutable_game_state: RwLock<MutableState>,
+    // this state is fixed for the whole lifetime of the server
+    pub immutable_proving_state: ImmutableState,
+}
+
+#[derive(Clone, Debug)]
+pub struct MutableState {
+    pub word_id: u32,
+    pub solution: String,
+    pub salt: BigUint,
+    pub commitment: BigUint,
+    pub path: Vec<MerklePathEntry>,
+}
+
+pub struct ImmutableState {
     pub membership_config: CircomConfig<Bn254>,
     pub clue_config: CircomConfig<Bn254>,
     pub clue_pk: ProvingKey<Bn254>,
     pub membership_pk: ProvingKey<Bn254>,
-}
-
-#[derive(Clone, Debug)]
-pub struct GameState {
-    pub word_id: usize,
-    pub solution: String,
-}
-
-#[derive(Clone, Debug)]
-pub struct CmState {
-    pub salt: BigUint,
-    pub commitment: BigUint,
-}
-
-#[derive(Clone, Debug)]
-pub struct MerkleState {
-    pub path: Vec<MerklePathEntry>,
-    pub root_hash: BigUint,
+    pub word_bank: WordBank, // not clonable
 }
 
 pub struct GameStateService {
-    shared_state: Arc<RwLock<SharedState>>,
-    word_bank: WordBank,
+    shared_state: Arc<SharedState>,
 }
 
 impl GameStateService {
@@ -51,7 +45,7 @@ impl GameStateService {
         println!("Creating word bank...");
         let word_bank = WordBank::new().expect("word bank creation should succeed");
 
-        println!("Setting circom configs and proving keys...");
+        println!("Setting circom configs and proving keys (this may take a while)...");
         let mut key_file = std::fs::File::open("../keys/clue_final.zkey").unwrap();
         let (clue_pk, _matrices) = read_zkey(&mut key_file).unwrap();
         let mut key_file = std::fs::File::open("../keys/membership_final.zkey").unwrap();
@@ -67,31 +61,31 @@ impl GameStateService {
         )
         .expect("clue config creation should succeed");
 
-        let (game_state, cm_state, merkle_state) = create_game(&word_bank, 0);
+        let game_state = create_game(&word_bank, 0);
         let shared_state = SharedState {
-            game_state,
-            cm_state,
-            merkle_state,
-            membership_config,
-            clue_config,
-            clue_pk,
-            membership_pk,
+            mutable_game_state: RwLock::new(game_state),
+            immutable_proving_state: ImmutableState {
+                membership_config,
+                clue_config,
+                clue_pk,
+                membership_pk,
+                word_bank,
+            },
         };
 
         GameStateService {
-            shared_state: Arc::new(RwLock::new(shared_state)),
-            word_bank,
+            shared_state: Arc::new(shared_state),
         }
     }
 
-    pub fn get_state(&self) -> Arc<RwLock<SharedState>> {
+    pub fn get_state(&self) -> Arc<SharedState> {
         self.shared_state.clone()
     }
 
     pub async fn run(mut self) {
         println!(
             "Starting game state service with initial state: {:?}",
-            self.shared_state.read().game_state.clone(),
+            self.shared_state.mutable_game_state.read().clone(),
         );
 
         loop {
@@ -100,37 +94,35 @@ impl GameStateService {
             self.update_game_state();
             println!(
                 "New game state: {:?}",
-                self.shared_state.read().game_state.clone()
+                self.shared_state.mutable_game_state.read().clone()
             )
         }
     }
 
     fn update_game_state(&mut self) {
-        let (game_sate, cm_state, merkle_state) = create_game(
-            &self.word_bank,
-            self.shared_state.read().game_state.word_id + 1,
+        let game_state = create_game(
+            &self.shared_state.immutable_proving_state.word_bank,
+            self.shared_state.mutable_game_state.read().word_id + 1,
         );
-        let mut shared_state = self.shared_state.write();
-        shared_state.game_state = game_sate;
-        shared_state.cm_state = cm_state;
-        shared_state.merkle_state = merkle_state;
+        *self.shared_state.mutable_game_state.write() = game_state;
     }
 }
 
-fn create_game(word_bank: &WordBank, word_id: usize) -> (GameState, CmState, MerkleState) {
+fn create_game(word_bank: &WordBank, word_id: u32) -> MutableState {
     let PickWordResult {
         word: solution,
         path,
-        root_hash,
     } = word_bank.pick_word();
 
     let salt: BigUint = thread_rng().sample(RandomBits::new(256));
     let commitment =
         hash_word_with_salt(&solution, &salt).expect("passed string numbers should fit 256 bits");
 
-    (
-        GameState { word_id, solution },
-        CmState { commitment, salt },
-        MerkleState { path, root_hash },
-    )
+    MutableState {
+        word_id,
+        solution,
+        commitment,
+        salt,
+        path,
+    }
 }

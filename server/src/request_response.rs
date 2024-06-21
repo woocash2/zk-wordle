@@ -11,12 +11,13 @@ pub struct ProofSerializable {
 
 #[derive(Serialize, Deserialize)]
 pub struct GuessRequest {
+    pub word_id: u32,
     pub guess: String,
 }
 
 #[derive(Serialize)]
 pub struct StartResponse {
-    pub word_id: usize,
+    pub word_id: u32,
     pub commitment: String,
     pub proof: ProofSerializable,
 }

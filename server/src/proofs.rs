@@ -3,21 +3,17 @@ use ark_circom::{circom::Inputs, CircomBuilder, CircomConfig, CircomReduction};
 use ark_ff::{BigInteger, PrimeField};
 use ark_groth16::{Groth16, Proof, ProvingKey};
 use ark_snark::SNARK;
-use merkle::NodeType;
-use num_bigint::BigInt;
-
-use crate::game_state::CmState;
-use crate::game_state::MerkleState;
+use merkle::{MerklePathEntry, NodeType};
+use num_bigint::{BigInt, BigUint};
 
 pub fn generate_clue_proof(
     guess: String,
     solution: String,
-    cm_state: CmState,
+    commitment: BigUint,
+    salt: BigUint,
     config: CircomConfig<Bn254>,
     pk: ProvingKey<Bn254>,
 ) -> (Proof<Bn254>, [u8; 5]) {
-    let CmState { commitment, salt } = cm_state;
-
     let guess = string_to_bigints(guess);
     let solution = string_to_bigints(solution);
 
@@ -55,18 +51,19 @@ pub fn generate_clue_proof(
 
 pub fn generate_membership_proof(
     solution: String,
-    cm_state: CmState,
-    merkle_state: MerkleState,
+    commitment: BigUint,
+    salt: BigUint,
+    path: Vec<MerklePathEntry>,
     config: CircomConfig<Bn254>,
     pk: ProvingKey<Bn254>,
 ) -> Proof<Bn254> {
     let solution = string_to_bigints(solution);
     let mut builder = CircomBuilder::new(config);
 
-    let mut hashes = Vec::with_capacity(merkle_state.path.len());
-    let mut indicators = Vec::with_capacity(merkle_state.path.len());
+    let mut hashes = Vec::with_capacity(path.len());
+    let mut indicators = Vec::with_capacity(path.len());
 
-    for entry in merkle_state.path {
+    for entry in path {
         hashes.push(vec![entry.left.into(), entry.right.into()]);
         indicators.push(match entry.on_path {
             NodeType::Left => 0.into(),
@@ -75,8 +72,8 @@ pub fn generate_membership_proof(
     }
 
     builder.push_input("word", Inputs::BigIntVec(solution));
-    builder.push_input("salt", Inputs::BigInt(cm_state.salt.into()));
-    builder.push_input("cm", Inputs::BigInt(cm_state.commitment.into()));
+    builder.push_input("salt", Inputs::BigInt(salt.into()));
+    builder.push_input("cm", Inputs::BigInt(commitment.into()));
     builder.push_input("hashes", Inputs::BigIntVecVec(hashes));
     builder.push_input("pathIndicators", Inputs::BigIntVec(indicators));
 

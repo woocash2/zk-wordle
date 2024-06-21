@@ -1,10 +1,10 @@
 use std::{
+    collections::HashSet,
     fs::File,
     io::{self, BufRead, BufReader},
 };
 
 use merkle::{MerklePathEntry, MerkleTree};
-use num_bigint::BigUint;
 use rand::{thread_rng, Rng};
 
 #[derive(Debug)]
@@ -19,17 +19,15 @@ pub struct PickWordResult {
     pub word: String,
     // merkle siblings which contain a path to the merkle root
     pub path: Vec<MerklePathEntry>,
-    // merkle root hash
-    pub root_hash: BigUint,
 }
 
 const SOLUTION_WORDS_PATH: &str = "../words/possible_solutions.txt";
 const OTHER_WORDS_PATH: &str = "../words/possible_solutions.txt";
 
 pub struct WordBank {
-    #[allow(dead_code)]
     tree: MerkleTree,
-    words: Vec<String>,
+    words: Vec<String>, // mostly for picking random words -------------> clearly unoptimal to have 2 collections
+    words_set: HashSet<String>, // for checking membership of a word ---> but it's convenient...
 }
 
 impl WordBank {
@@ -45,9 +43,15 @@ impl WordBank {
 
         let tree = MerkleTree::new(&all_words).map_err(Error::MerkleCreateFail)?;
 
+        let mut words_set = HashSet::new();
+        for word in all_words.iter() {
+            words_set.insert(word.clone());
+        }
+
         Ok(WordBank {
             tree,
             words: all_words,
+            words_set,
         })
     }
 
@@ -59,8 +63,11 @@ impl WordBank {
                 .tree
                 .get_path(idx)
                 .expect("idx should exist in merkle tree"),
-            root_hash: self.tree.root_hash(),
         }
+    }
+
+    pub fn has_word(&self, word: &str) -> bool {
+        self.words_set.contains(word)
     }
 }
 
