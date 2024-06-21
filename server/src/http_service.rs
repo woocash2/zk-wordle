@@ -4,17 +4,20 @@ use ark_ff::{BigInteger, PrimeField};
 use ark_groth16::{Groth16, Proof, ProvingKey};
 use ark_snark::SNARK;
 use axum::{
-    extract::Path, extract::State, http::Method, response::IntoResponse, routing::get, serve, Json,
-    Router,
+    extract::Path, extract::State, http::Method, response::IntoResponse, routing::get, Json, Router,
 };
-use log::error;
+use axum_server::tls_rustls::RustlsConfig;
+
 use merkle::NodeType;
 use num_bigint::BigInt;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
+
+use std::io::{self};
+use std::net::ToSocketAddrs;
+use std::path::Path as Path2;
 
 use crate::game_state::CmState;
 use crate::game_state::MerkleState;
@@ -122,17 +125,22 @@ pub async fn run(addr: &str, state: Arc<RwLock<SharedState>>) {
         .layer(cors)
         .with_state(state);
 
-    let listener = match TcpListener::bind(addr).await {
-        Ok(listener) => listener,
-        Err(e) => {
-            error!("Couldn't create listener: {}", e);
-            return;
-        }
-    };
+    let addr = addr
+        .to_socket_addrs()
+        .unwrap()
+        .next()
+        .ok_or_else(|| io::Error::from(io::ErrorKind::AddrNotAvailable))
+        .unwrap();
 
-    if let Err(e) = serve(listener, app).await {
-        error!("Error while serving: {}", e);
-    }
+    let config =
+        RustlsConfig::from_pem_file(Path2::new("~/server.crt"), Path2::new("~/server.key"))
+            .await
+            .unwrap();
+
+    axum_server::bind_rustls(addr, config)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 }
 
 #[derive(Serialize)]
