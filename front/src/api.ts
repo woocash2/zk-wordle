@@ -11,7 +11,7 @@ import {
 import { groth16, type Groth16Proof } from "snarkjs";
 import { vk_clue, vk_membership } from "./keys";
 
-const ADDRESS = "http://localhost:4000";
+const ADDRESS = "https://bb-zk-wordle.northeurope.cloudapp.azure.com:8080";
 
 function sanitizeProof(proof: SerializedProof): Proof {
   return {

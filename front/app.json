@@ -8,6 +8,9 @@
     "ios": {
       "supportsTablet": true
     },
+    "experiments": {
+      "baseUrl": "/zk-wordle"
+    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"

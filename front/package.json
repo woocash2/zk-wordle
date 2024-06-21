@@ -8,7 +8,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "deploy": "gh-pages -t -d dist",
+    "predeploy": "expo export -p web"
   },
   "dependencies": {
     "@expo/browser-polyfill": "^1.0.1",
@@ -36,6 +38,7 @@
     "@babel/core": "^7.20.0",
     "@types/react": "^18.3.3",
     "buffer": "^4.9.2",
+    "gh-pages": "^6.1.1",
     "typescript": "^5.4.5"
   },
   "private": true
