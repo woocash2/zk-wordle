@@ -4,6 +4,8 @@ use tokio::select;
 
 mod game_state;
 mod http_service;
+mod proofs;
+mod request_response;
 mod word_bank;
 
 #[tokio::main]
