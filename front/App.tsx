@@ -7,12 +7,12 @@ import Animated, {
   FlipInEasyX,
   LayoutAnimationConfig,
   LinearTransition,
+  SlideInUp,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
-import { TopBar } from "./src/TopBar";
 import { Color, type Commitment, type Guess } from "./src/types";
 import {
   getClue,
@@ -87,7 +87,8 @@ function InputRow({
   return (
     <Animated.View
       key={"input"}
-      layout={LinearTransition}
+      layout={LinearTransition.duration(10000)}
+      entering={FadeInUp}
       style={[styles.row, animatedStyle]}
     >
       {trimmedText.split("").map((char, i) => (
@@ -125,7 +126,7 @@ export default function App() {
   const yellowLetters = useRef(new Set<string>());
   const darkGreyLetters = useRef(new Set<string>());
   const [commitment, setCommitment] = useState<Commitment | null>(null);
-  const [isInvalid, setIsInvalid] = useState<boolean>(false);
+  const [isInvalidProof, setIsInvalidProof] = useState<boolean>(false);
   const [isMembershipVerified, setIsMembershipVerified] =
     useState<boolean>(false);
   const [isInvalidGuess, setIsInvalidGuess] = useState<boolean>(false);
@@ -139,7 +140,7 @@ export default function App() {
     if (commitment) {
       verifyCommitment(commitment).then((valid) => {
         if (!valid) {
-          setIsInvalid(true);
+          setIsInvalidProof(true);
         } else {
           setIsMembershipVerified(true);
         }
@@ -178,14 +179,21 @@ export default function App() {
         return;
       }
       setIsLoading(true);
-      getClue(text, commitment.word_id).then((clue) => {
-        if (clue === null) {
-          setIsCommitmentOld(true);
+      getClue(text, commitment.word_id).then((response) => {
+        if (response.type === "error") {
+          if (response.error === "word does not exist") {
+            setIsInvalidGuess(true);
+          } else {
+            setIsCommitmentOld(true);
+          }
+          setIsLoading(false);
           return;
         }
+        const clue = response.value;
+
         verifyClue(text, clue, commitment.commitment).then((valid) => {
           if (!valid) {
-            setIsInvalid(true);
+            setIsInvalidProof(true);
             return;
           }
           setGuesses([...guesses, { word: text, colors: clue.colors }]);
@@ -222,7 +230,7 @@ export default function App() {
           <Text style={styles.errorText}>{"Please refresh the page."}</Text>
         </Animated.View>
       )}
-      {isInvalid && (
+      {isInvalidProof && (
         <Animated.Text
           entering={FadeIn}
           style={[styles.errorText, { marginBottom: 10 }]}
@@ -246,13 +254,15 @@ export default function App() {
             key={guesses.length}
             text={text}
             isLoading={isLoading}
-            isInvalid={isInvalid}
+            isInvalid={isInvalidProof}
             isInvalidGuess={isInvalidGuess}
           />
         )}
       </View>
       <Keyboard
-        isLoading={commitment === null || isInvalid || finished || isLoading}
+        isLoading={
+          commitment === null || isInvalidProof || finished || isLoading
+        }
         greenLetters={greenLetters.current}
         yellowLetters={yellowLetters.current}
         darkGreyLetters={darkGreyLetters.current}
