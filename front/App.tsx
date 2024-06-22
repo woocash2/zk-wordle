@@ -98,7 +98,7 @@ function InputRow({
           style={[
             styles.cell,
             cellStyle,
-            isInvalid && { backgroundColor: "#FF2222" },
+            isInvalid && { backgroundColor: "red" },
           ]}
         >
           <LayoutAnimationConfig skipExiting>
@@ -171,16 +171,6 @@ export default function App() {
     setText((prev) => (prev.length < 5 ? prev + char : prev));
   };
 
-  const onReset = () => {
-    if (isLoading) return;
-    setIsInvalidGuess(false);
-    setGuesses([]);
-    setText("");
-    greenLetters.current.clear();
-    yellowLetters.current.clear();
-    darkGreyLetters.current.clear();
-  };
-
   const onSubmit = () => {
     if (text.length === 5 && commitment !== null) {
       if (!validGuesses.has(text.toLowerCase())) {
@@ -213,22 +203,30 @@ export default function App() {
     setIsInvalidGuess(false);
   };
 
+  const cmt = commitment?.commitment ?? "";
+
   return (
     <View style={styles.container}>
-      <TopBar onReset={onReset} />
-      <Text style={styles.hash}>
-        Current hash: {commitment?.commitment}
-        {isMembershipVerified ? " ✅" : " ⏱️"}
-      </Text>
+      <View style={{ flexDirection: "row", flexShrink: 1, marginBottom: 10 }}>
+        <Text style={styles.hash}>
+          Current hash: {cmt.slice(0, Math.floor(cmt.length / 2))}
+          {"\n"}
+          {cmt.slice(Math.floor(cmt.length / 2), cmt.length)}
+          {isMembershipVerified ? " ✅" : " ⏱️"}
+        </Text>
+      </View>
       {isCommitmentOld && (
-        <Animated.View entering={FadeIn}>
+        <Animated.View entering={FadeIn} style={{ marginBottom: 10 }}>
           <Text style={styles.errorText}>{"The commitment is old."}</Text>
           <Text style={styles.errorText}>{"There is a new word."}</Text>
           <Text style={styles.errorText}>{"Please refresh the page."}</Text>
         </Animated.View>
       )}
       {isInvalid && (
-        <Animated.Text entering={FadeIn} style={styles.errorText}>
+        <Animated.Text
+          entering={FadeIn}
+          style={[styles.errorText, { marginBottom: 10 }]}
+        >
           {"The server is lying to you :("}
         </Animated.Text>
       )}
@@ -239,7 +237,7 @@ export default function App() {
           )}
         />
       )}
-      <View style={{ padding: 40 }}>
+      <View>
         {guesses.map((guess, i) => (
           <Row key={i} word={guess.word} colors={guess.colors} />
         ))}
@@ -254,6 +252,7 @@ export default function App() {
         )}
       </View>
       <Keyboard
+        isLoading={commitment === null || isInvalid || finished || isLoading}
         greenLetters={greenLetters.current}
         yellowLetters={yellowLetters.current}
         darkGreyLetters={darkGreyLetters.current}
@@ -302,6 +301,8 @@ const styles = StyleSheet.create({
   hash: {
     color: "white",
     fontSize: 10,
+    flexShrink: 1,
+    textAlign: "center",
   },
   errorText: {
     color: "#FF2222",
