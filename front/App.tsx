@@ -98,7 +98,7 @@ function InputRow({
           style={[
             styles.cell,
             cellStyle,
-            isInvalid && { backgroundColor: "red" },
+            isInvalid && { backgroundColor: "#FF2222" },
           ]}
         >
           <LayoutAnimationConfig skipExiting>
@@ -129,6 +129,7 @@ export default function App() {
   const [isMembershipVerified, setIsMembershipVerified] =
     useState<boolean>(false);
   const [isInvalidGuess, setIsInvalidGuess] = useState<boolean>(false);
+  const [isCommitmentOld, setIsCommitmentOld] = useState<boolean>(false);
 
   useEffect(() => {
     getCommitment().then(setCommitment);
@@ -187,7 +188,11 @@ export default function App() {
         return;
       }
       setIsLoading(true);
-      getClue(text).then((clue) => {
+      getClue(text, commitment.word_id).then((clue) => {
+        if (clue === null) {
+          setIsCommitmentOld(true);
+          return;
+        }
         verifyClue(text, clue, commitment.commitment).then((valid) => {
           if (!valid) {
             setIsInvalid(true);
@@ -215,8 +220,17 @@ export default function App() {
         Current hash: {commitment?.commitment}
         {isMembershipVerified ? " ✅" : " ⏱️"}
       </Text>
+      {isCommitmentOld && (
+        <Animated.View entering={FadeIn}>
+          <Text style={styles.errorText}>{"The commitment is old."}</Text>
+          <Text style={styles.errorText}>{"There is a new word."}</Text>
+          <Text style={styles.errorText}>{"Please refresh the page."}</Text>
+        </Animated.View>
+      )}
       {isInvalid && (
-        <Text style={styles.redText}>{"The server is lying to you :(("}</Text>
+        <Animated.Text entering={FadeIn} style={styles.errorText}>
+          {"The server is lying to you :("}
+        </Animated.Text>
       )}
       {finished && (
         <ResultView
@@ -289,8 +303,9 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 10,
   },
-  redText: {
-    color: "red",
-    fontSize: 50,
+  errorText: {
+    color: "#FF2222",
+    fontSize: 30,
+    alignSelf: "center",
   },
 });

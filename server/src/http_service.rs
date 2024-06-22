@@ -1,3 +1,4 @@
+use axum::http::header::CONTENT_TYPE;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{
@@ -19,7 +20,8 @@ pub async fn run(addr: &str, state: Arc<SharedState>) {
     // TODO: figure out how to handle CORS
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST])
-        .allow_origin(Any);
+        .allow_origin(Any)
+        .allow_headers([CONTENT_TYPE]);
 
     let app = Router::new()
         .route("/start", get(handle_start))
