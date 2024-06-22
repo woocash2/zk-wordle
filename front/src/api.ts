@@ -5,6 +5,7 @@ import {
   type ClueResponse,
   type Commitment,
   type Proof,
+  type Result,
   type SerializedProof,
   type StartResponse,
 } from "./types";
@@ -25,19 +26,35 @@ function sanitizeProof(proof: SerializedProof): Proof {
   };
 }
 
-export async function getClue(guess: string): Promise<Clue> {
-  const res = await fetch(`${ADDRESS}/guess/${guess.toLowerCase()}`);
+export async function getClue(
+  guess: string,
+  word_id: string
+): Promise<Result<Clue>> {
+  const res = await fetch(`${ADDRESS}/guess`, {
+    method: "POST",
+    body: JSON.stringify({ guess: guess.toLowerCase(), word_id }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    return { type: "error", error: text };
+  }
   const { colors, proof } = (await res.json()) as ClueResponse;
 
   const sanitizedProof = sanitizeProof(proof);
 
   console.log(sanitizedProof);
   return {
-    clue: colors,
-    colors: colors.map((x) =>
-      x === 2 ? Color.GREEN : x === 1 ? Color.YELLOW : Color.DARK_GREY
-    ),
-    proof: sanitizedProof,
+    type: "ok",
+    value: {
+      clue: colors,
+      colors: colors.map((x) =>
+        x === 2 ? Color.GREEN : x === 1 ? Color.YELLOW : Color.DARK_GREY
+      ),
+      proof: sanitizedProof,
+    },
   };
 }
 
@@ -81,7 +98,7 @@ export async function verifyClue(
 
 export async function getCommitment(): Promise<Commitment> {
   const res = await fetch(`${ADDRESS}/start`);
-  const { commitment, proof } = (await res.json()) as StartResponse;
+  const { commitment, proof, word_id } = (await res.json()) as StartResponse;
 
   const sanitizedProof = sanitizeProof(proof);
 
@@ -89,11 +106,12 @@ export async function getCommitment(): Promise<Commitment> {
   return {
     commitment,
     proof: sanitizedProof,
+    word_id: word_id,
   };
 }
 
 const rootHash =
-  "4768437044799254023802168680693360623505449298048650929961070166353749090917";
+  "4521038097998819656385597678445593990587736616960091096304104088305796197427";
 
 export async function verifyCommitment(
   commitment: Commitment

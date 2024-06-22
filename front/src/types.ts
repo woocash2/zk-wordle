@@ -36,9 +36,15 @@ export type ClueResponse = {
 export type StartResponse = {
   commitment: string;
   proof: SerializedProof;
+  word_id: string;
 };
 
 export type Commitment = {
   commitment: string;
   proof: Proof;
+  word_id: string;
 };
+
+export type Result<T> =
+  | { type: "ok"; value: T }
+  | { type: "error"; error: string };

@@ -1,10 +1,10 @@
 use std::{
+    collections::HashSet,
     fs::File,
     io::{self, BufRead, BufReader},
 };
 
 use merkle::{MerklePathEntry, MerkleTree};
-use num_bigint::BigUint;
 use rand::{thread_rng, Rng};
 
 #[derive(Debug)]
@@ -19,48 +19,53 @@ pub struct PickWordResult {
     pub word: String,
     // merkle siblings which contain a path to the merkle root
     pub path: Vec<MerklePathEntry>,
-    // merkle root hash
-    pub root_hash: BigUint,
 }
 
 const SOLUTION_WORDS_PATH: &str = "../words/possible_solutions.txt";
-const OTHER_WORDS_PATH: &str = "../words/possible_solutions.txt";
+const OTHER_WORDS_PATH: &str = "../words/other_valid.txt";
 
 pub struct WordBank {
-    #[allow(dead_code)]
     tree: MerkleTree,
-    words: Vec<String>,
+    solution_words: Vec<String>, // contains solution words which correspond to merkle leaves
+    all_words: HashSet<String>,  // includes all acceptable guess words
 }
 
 impl WordBank {
     pub fn new() -> Result<Self, Error> {
         let solution_words = read_file(SOLUTION_WORDS_PATH).map_err(Error::IoFail)?;
         let other_words = read_file(OTHER_WORDS_PATH).map_err(Error::IoFail)?;
-        let mut all_words = solution_words;
-        all_words.extend(other_words);
+
+        let mut all_words = HashSet::from_iter(other_words);
+        for w in solution_words.iter() {
+            all_words.insert(w.clone());
+        }
 
         if all_words.iter().any(|w| !word_is_ok(w)) {
             return Err(Error::BadWord);
         }
 
-        let tree = MerkleTree::new(&all_words).map_err(Error::MerkleCreateFail)?;
+        let tree = MerkleTree::new(&solution_words).map_err(Error::MerkleCreateFail)?;
 
         Ok(WordBank {
             tree,
-            words: all_words,
+            solution_words,
+            all_words,
         })
     }
 
     pub fn pick_word(&self) -> PickWordResult {
-        let idx = thread_rng().gen_range(0..self.words.len());
+        let idx = thread_rng().gen_range(0..self.solution_words.len());
         PickWordResult {
-            word: self.words[idx].clone(),
+            word: self.solution_words[idx].clone(),
             path: self
                 .tree
                 .get_path(idx)
                 .expect("idx should exist in merkle tree"),
-            root_hash: self.tree.root_hash(),
         }
+    }
+
+    pub fn has_word(&self, word: &str) -> bool {
+        self.all_words.contains(word)
     }
 }
 
