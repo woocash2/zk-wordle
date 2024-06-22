@@ -25,8 +25,20 @@ function sanitizeProof(proof: SerializedProof): Proof {
   };
 }
 
-export async function getClue(guess: string): Promise<Clue> {
-  const res = await fetch(`${ADDRESS}/guess/${guess.toLowerCase()}`);
+export async function getClue(
+  guess: string,
+  word_id: string
+): Promise<Clue | null> {
+  const res = await fetch(`${ADDRESS}/guess`, {
+    method: "POST",
+    body: JSON.stringify({ guess: guess.toLowerCase(), word_id }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) {
+    return null;
+  }
   const { colors, proof } = (await res.json()) as ClueResponse;
 
   const sanitizedProof = sanitizeProof(proof);
@@ -81,7 +93,7 @@ export async function verifyClue(
 
 export async function getCommitment(): Promise<Commitment> {
   const res = await fetch(`${ADDRESS}/start`);
-  const { commitment, proof } = (await res.json()) as StartResponse;
+  const { commitment, proof, word_id } = (await res.json()) as StartResponse;
 
   const sanitizedProof = sanitizeProof(proof);
 
@@ -89,6 +101,7 @@ export async function getCommitment(): Promise<Commitment> {
   return {
     commitment,
     proof: sanitizedProof,
+    word_id: word_id,
   };
 }
 
