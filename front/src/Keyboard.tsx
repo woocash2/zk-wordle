@@ -1,6 +1,10 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Text, View, StyleSheet } from "react-native";
-import Animated from "react-native-reanimated";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { Color } from "./types";
 
 const KEYBOARD_ROWS: string[][] = [
@@ -12,14 +16,32 @@ const KEYBOARD_ROWS: string[][] = [
 export function BigKey({
   char,
   onPress,
+  isLoading,
 }: {
   char: string;
   onPress: () => void;
+  isLoading?: boolean;
 }) {
+  const sv = useSharedValue<string>(Color.DARK_GREY);
+
+  useEffect(() => {
+    sv.value = withTiming(isLoading ? Color.DARK_GREY : Color.GREY);
+  }, [isLoading]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      backgroundColor: sv.value,
+    };
+  });
+
   return (
-    <Text onPress={onPress} style={styles.bigKey}>
+    <Animated.Text
+      selectable={false}
+      onPress={onPress}
+      style={[styles.bigKey, animatedStyle]}
+    >
       {char}
-    </Text>
+    </Animated.Text>
   );
 }
 
@@ -30,6 +52,7 @@ export function Keyboard({
   greenLetters,
   yellowLetters,
   darkGreyLetters,
+  isLoading,
 }: {
   onPress: (char: string) => void;
   onSubmit: () => void;
@@ -37,14 +60,18 @@ export function Keyboard({
   greenLetters: Set<string>;
   yellowLetters: Set<string>;
   darkGreyLetters: Set<string>;
+  isLoading: boolean;
 }) {
   return (
     <View style={styles.keyboardContainer}>
       {KEYBOARD_ROWS.map((row, i) => (
         <Animated.View key={i} style={styles.row}>
-          {i === 2 && <BigKey char="⏎" onPress={onSubmit} />}
+          {i === 2 && (
+            <BigKey char="⏎" isLoading={isLoading} onPress={onSubmit} />
+          )}
           {row.map((char, j) => (
             <Text
+              selectable={false}
               onPress={() => onPress(char)}
               key={j}
               style={[
@@ -96,7 +123,7 @@ const styles = StyleSheet.create({
     margin: 2,
     fontSize: 32,
     fontWeight: "500",
-    width: 35,
+    width: 30,
     height: 50,
     textAlign: "center",
     textAlignVertical: "center",
