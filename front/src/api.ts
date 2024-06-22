@@ -5,6 +5,7 @@ import {
   type ClueResponse,
   type Commitment,
   type Proof,
+  type Result,
   type SerializedProof,
   type StartResponse,
 } from "./types";
@@ -28,7 +29,7 @@ function sanitizeProof(proof: SerializedProof): Proof {
 export async function getClue(
   guess: string,
   word_id: string
-): Promise<Clue | null> {
+): Promise<Result<Clue>> {
   const res = await fetch(`${ADDRESS}/guess`, {
     method: "POST",
     body: JSON.stringify({ guess: guess.toLowerCase(), word_id }),
@@ -37,7 +38,8 @@ export async function getClue(
     },
   });
   if (!res.ok) {
-    return null;
+    const text = await res.text();
+    return { type: "error", error: text };
   }
   const { colors, proof } = (await res.json()) as ClueResponse;
 
@@ -45,11 +47,14 @@ export async function getClue(
 
   console.log(sanitizedProof);
   return {
-    clue: colors,
-    colors: colors.map((x) =>
-      x === 2 ? Color.GREEN : x === 1 ? Color.YELLOW : Color.DARK_GREY
-    ),
-    proof: sanitizedProof,
+    type: "ok",
+    value: {
+      clue: colors,
+      colors: colors.map((x) =>
+        x === 2 ? Color.GREEN : x === 1 ? Color.YELLOW : Color.DARK_GREY
+      ),
+      proof: sanitizedProof,
+    },
   };
 }
 

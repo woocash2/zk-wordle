@@ -44,3 +44,7 @@ export type Commitment = {
   proof: Proof;
   word_id: string;
 };
+
+export type Result<T> =
+  | { type: "ok"; value: T }
+  | { type: "error"; error: string };
