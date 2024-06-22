@@ -87,7 +87,7 @@ function InputRow({
   return (
     <Animated.View
       key={"input"}
-      layout={LinearTransition.duration(10000)}
+      layout={LinearTransition}
       entering={FadeInUp}
       style={[styles.row, animatedStyle]}
     >
@@ -173,6 +173,9 @@ export default function App() {
   };
 
   const onSubmit = () => {
+    if (isInvalidProof) {
+      return;
+    }
     if (text.length === 5 && commitment !== null) {
       if (!validGuesses.has(text.toLowerCase())) {
         setIsInvalidGuess(true);
@@ -206,7 +209,7 @@ export default function App() {
   };
 
   const onBack = () => {
-    if (isLoading) return;
+    if (isLoading || isInvalidProof) return;
     setText((prev) => prev.slice(0, prev.length - 1));
     setIsInvalidGuess(false);
   };
