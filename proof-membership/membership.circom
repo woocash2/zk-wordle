@@ -84,4 +84,4 @@ template Membership(numLevels) {
     rootHash <== poseidon[numLevels].out;
 }
 
-component main {public [cm]} = Membership(13); // our wordle-merkle has 13 levels
+component main {public [cm]} = Membership(12); // our wordle-merkle has 12 levels edge-wise

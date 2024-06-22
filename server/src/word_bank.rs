@@ -22,43 +22,41 @@ pub struct PickWordResult {
 }
 
 const SOLUTION_WORDS_PATH: &str = "../words/possible_solutions.txt";
-const OTHER_WORDS_PATH: &str = "../words/possible_solutions.txt";
+const OTHER_WORDS_PATH: &str = "../words/other_valid.txt";
 
 pub struct WordBank {
     tree: MerkleTree,
-    words: Vec<String>, // mostly for picking random words -------------> clearly unoptimal to have 2 collections
-    words_set: HashSet<String>, // for checking membership of a word ---> but it's convenient...
+    solution_words: Vec<String>, // contains solution words which correspond to merkle leaves
+    all_words: HashSet<String>,  // includes all acceptable guess words
 }
 
 impl WordBank {
     pub fn new() -> Result<Self, Error> {
         let solution_words = read_file(SOLUTION_WORDS_PATH).map_err(Error::IoFail)?;
         let other_words = read_file(OTHER_WORDS_PATH).map_err(Error::IoFail)?;
-        let mut all_words = solution_words;
-        all_words.extend(other_words);
+
+        let mut all_words = HashSet::from_iter(other_words);
+        for w in solution_words.iter() {
+            all_words.insert(w.clone());
+        }
 
         if all_words.iter().any(|w| !word_is_ok(w)) {
             return Err(Error::BadWord);
         }
 
-        let tree = MerkleTree::new(&all_words).map_err(Error::MerkleCreateFail)?;
-
-        let mut words_set = HashSet::new();
-        for word in all_words.iter() {
-            words_set.insert(word.clone());
-        }
+        let tree = MerkleTree::new(&solution_words).map_err(Error::MerkleCreateFail)?;
 
         Ok(WordBank {
             tree,
-            words: all_words,
-            words_set,
+            solution_words,
+            all_words,
         })
     }
 
     pub fn pick_word(&self) -> PickWordResult {
-        let idx = thread_rng().gen_range(0..self.words.len());
+        let idx = thread_rng().gen_range(0..self.solution_words.len());
         PickWordResult {
-            word: self.words[idx].clone(),
+            word: self.solution_words[idx].clone(),
             path: self
                 .tree
                 .get_path(idx)
@@ -67,7 +65,7 @@ impl WordBank {
     }
 
     pub fn has_word(&self, word: &str) -> bool {
-        self.words_set.contains(word)
+        self.all_words.contains(word)
     }
 }
 
