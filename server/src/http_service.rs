@@ -38,10 +38,12 @@ pub async fn run(addr: &str, state: Arc<SharedState>) {
         .ok_or_else(|| io::Error::from(io::ErrorKind::AddrNotAvailable))
         .unwrap();
 
-    let config =
-        RustlsConfig::from_pem_file(Path2::new("~/server.crt"), Path2::new("~/server.key"))
-            .await
-            .unwrap();
+    let config = RustlsConfig::from_pem_file(
+        Path2::new("/home/bb/fullchain.pem"),
+        Path2::new("/home/bb/privkey.pem"),
+    )
+    .await
+    .unwrap();
 
     axum_server::bind_rustls(addr, config)
         .serve(app.into_make_service())

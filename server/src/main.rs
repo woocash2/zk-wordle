@@ -16,7 +16,7 @@ async fn main() {
     let shared_state = state_service.get_state();
 
     let state_service_handle = state_service.run();
-    let http_service_handle = http_service::run("127.0.0.1:4000", shared_state);
+    let http_service_handle = http_service::run("0.0.0.0:8080", shared_state);
 
     select! {
         _ = state_service_handle => {
