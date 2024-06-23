@@ -24,6 +24,9 @@ pub struct PickWordResult {
 const SOLUTION_WORDS_PATH: &str = "../words/possible_solutions.txt";
 const OTHER_WORDS_PATH: &str = "../words/other_valid.txt";
 
+/// Represents the collection of the solution words, and all acceptable guess words.
+/// Maintains a vector of solution words (so that picking a random one is easy) and a hash set
+/// of all words (so that checking if a guess word is correct is easy).
 pub struct WordBank {
     tree: MerkleTree,
     solution_words: Vec<String>, // contains solution words which correspond to merkle leaves
@@ -31,6 +34,8 @@ pub struct WordBank {
 }
 
 impl WordBank {
+    /// Creates a new word bank. Reads solution words, and other acceptable guess words from files,
+    /// and creates a merkle tree on top of only the solution words.
     pub fn new() -> Result<Self, Error> {
         let solution_words = read_file(SOLUTION_WORDS_PATH).map_err(Error::IoFail)?;
         let other_words = read_file(OTHER_WORDS_PATH).map_err(Error::IoFail)?;
@@ -40,7 +45,7 @@ impl WordBank {
             all_words.insert(w.clone());
         }
 
-        if all_words.iter().any(|w| !word_is_ok(w)) {
+        if all_words.iter().any(|w| !is_word_ok(w)) {
             return Err(Error::BadWord);
         }
 
@@ -53,6 +58,7 @@ impl WordBank {
         })
     }
 
+    /// Randomly picks a solution word, and fetches the corresponding path in the merkle tree.
     pub fn pick_word(&self) -> PickWordResult {
         let idx = thread_rng().gen_range(0..self.solution_words.len());
         PickWordResult {
@@ -64,6 +70,7 @@ impl WordBank {
         }
     }
 
+    /// Used to verify if a guess word is acceptable to produce a clue.
     pub fn has_word(&self, word: &str) -> bool {
         self.all_words.contains(word)
     }
@@ -82,9 +89,45 @@ fn read_file(path: &str) -> io::Result<Vec<String>> {
     Ok(words)
 }
 
-fn word_is_ok(word: &str) -> bool {
+// Checks word correctness syntactically.
+fn is_word_ok(word: &str) -> bool {
     word.len() == 5
         && word
             .chars()
             .all(|c| c.is_ascii_alphabetic() && c.is_lowercase())
+}
+
+#[cfg(test)]
+mod test {
+    use crate::word_bank::is_word_ok;
+
+    #[test]
+    fn word_ok() {
+        assert!(is_word_ok("abxzy"));
+        assert!(is_word_ok("satuk"));
+        assert!(is_word_ok("qwert"));
+        assert!(is_word_ok("gamma"));
+        assert!(is_word_ok("iucrp"));
+    }
+
+    #[test]
+    fn word_not_ok_uppercase() {
+        assert!(!is_word_ok("abXzy"));
+        assert!(!is_word_ok("APQOW"));
+        assert!(!is_word_ok("wreoW"));
+    }
+
+    #[test]
+    fn word_not_ok_length() {
+        assert!(!is_word_ok("abivbdr"));
+        assert!(!is_word_ok("abi"));
+        assert!(!is_word_ok(""));
+    }
+
+    #[test]
+    fn word_not_ok_non_alpha() {
+        assert!(!is_word_ok("ąęóćź"));
+        assert!(!is_word_ok("98srh"));
+        assert!(!is_word_ok("/.,g["));
+    }
 }

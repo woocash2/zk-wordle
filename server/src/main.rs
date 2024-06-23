@@ -12,11 +12,18 @@ mod word_bank;
 async fn main() {
     env_logger::init();
 
-    let state_service = GameStateService::new();
-    let shared_state = state_service.get_state();
+    let state_service = match GameStateService::new() {
+        Ok(state) => state,
+        Err(e) => {
+            error!("Failed to initialize the game state: {:?}", e);
+            return;
+        }
+    };
 
-    let state_service_handle = state_service.run();
-    let http_service_handle = http_service::run("0.0.0.0:8080", shared_state);
+    let shared_state = state_service.get_state();
+    let state_service_handle = tokio::spawn(async move { state_service.run().await });
+    let http_service_handle =
+        tokio::spawn(async move { http_service::run("0.0.0.0:8080", shared_state).await });
 
     select! {
         _ = state_service_handle => {
