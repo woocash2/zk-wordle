@@ -124,10 +124,11 @@ impl GameStateService {
     }
 
     fn update_game_state(&mut self) {
-        match create_game(
+        let create_game_result = create_game(
             &self.shared_state.immutable_proving_state.word_bank,
             self.shared_state.mutable_game_state.read().word_id + 1,
-        ) {
+        );
+        match create_game_result {
             Ok(game_state) => {
                 *self.shared_state.mutable_game_state.write() = game_state;
                 info!(
