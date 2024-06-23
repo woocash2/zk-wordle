@@ -11,7 +11,6 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::game_state::SharedState;
 use crate::proofs::generate_clue_proof;
-use crate::proofs::generate_membership_proof;
 use crate::request_response::StartResponse;
 use crate::request_response::{GuessRequest, GuessResponse};
 
@@ -48,29 +47,10 @@ pub async fn run(addr: &str, state: Arc<SharedState>) {
 async fn handle_start(State(state): State<Arc<SharedState>>) -> impl IntoResponse {
     let game_state = state.mutable_game_state.read().clone();
 
-    let proof = match generate_membership_proof(
-        game_state.solution,
-        game_state.commitment.clone(),
-        game_state.salt,
-        game_state.path,
-        state.immutable_proving_state.membership_config.clone(),
-        state.immutable_proving_state.membership_pk.clone(),
-    ) {
-        Ok(proof) => proof,
-        Err(e) => {
-            error!("Membership proof generation failed: {:?}", e);
-            return Json((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "failed to generate a membership proof",
-            ))
-            .into_response();
-        }
-    };
-
     Json(StartResponse {
         word_id: game_state.word_id,
         commitment: game_state.commitment.to_string(),
-        proof: proof.into(),
+        proof: game_state.membership_proof.into(),
     })
     .into_response()
 }
@@ -84,11 +64,7 @@ async fn handle_guess(
     if guess.word_id != state.mutable_game_state.read().word_id {
         return Json((StatusCode::BAD_REQUEST, "bad word id")).into_response();
     }
-    if !state
-        .immutable_proving_state
-        .word_bank
-        .has_word(&guess.guess)
-    {
+    if !state.immutable_state.word_bank.has_word(&guess.guess) {
         return Json((StatusCode::BAD_REQUEST, "word does not exist")).into_response();
     }
 
@@ -99,8 +75,8 @@ async fn handle_guess(
         game_state.solution.clone(),
         game_state.commitment.clone(),
         game_state.salt.clone(),
-        state.immutable_proving_state.clue_config.clone(),
-        state.immutable_proving_state.clue_pk.clone(),
+        state.immutable_state.clue_config.clone(),
+        state.immutable_state.clue_pk.clone(),
     ) {
         Ok(value) => value,
         Err(e) => {
